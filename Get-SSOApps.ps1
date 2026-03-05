@@ -4,7 +4,7 @@
     Includes SSO details (SAML/OIDC), URLs, and assignments, with performance optimizations and a test mode.
 
 .DESCRIPTION
-    This script uses Microsoft Graph (unattended authentication) to list Service Principals of type 'Application' or 'Legacy'.
+    This script uses Microsoft Graph (interactive authentication) to list Service Principals of type 'Application' or 'Legacy'.
     Key features:
     - SSO type identification (SAML, OIDC, or Other).
     - Extraction of Identifiers and Reply URLs.
@@ -14,7 +14,6 @@
 
 .REQUIREMENTS
     - Module: Microsoft.Graph (Submodules: Applications, Identity.Directory, Users.Actions).
-    - 'config.json' file with credentials (Client Credentials + Certificate).
     - Minimum permissions: Application.Read.All, Directory.Read.All.
 
 .NOTES
@@ -23,32 +22,14 @@
     Version: 7.1 - Massive optimization (Parallel), Test Mode (-Top), and extended details (URLs).
 #>
 
-# --- CONNECTION AND CONFIGURATION BLOCK ---
-$configFilePath = Join-Path -Path (Split-Path $PSScriptRoot -Parent) -ChildPath "config.json"
-if (-not (Test-Path $configFilePath)) {
-    Write-Error "Configuration file 'config.json' not found at: $configFilePath"
-    return
-}
-
-try {
-    $config = Get-Content -Path $configFilePath -Raw | ConvertFrom-Json
-    $tenantId = $config.tenantId
-    $clientId = $config.clientId
-    $certThumbprint = $config.certThumbprint
-}
-catch {
-    Write-Error "Could not read or process 'config.json'. Please verify the file format."
-    return
-}
-
-try {
-    Write-Host "Connecting to Microsoft Graph with certificate..." -ForegroundColor Cyan
-    Connect-MgGraph -TenantId $tenantId -AppId $clientId -CertificateThumbprint $certThumbprint
+# --- CONNECTION BLOCK ---
+# If not already connected, connect interactively
+if (-not (Get-MgContext)) {
+    Write-Host "Connecting to Microsoft Graph..." -ForegroundColor Cyan
+    Connect-MgGraph -Scopes 'Application.Read.All' -NoWelcome
     Write-Host "Connection successful." -ForegroundColor Green
-}
-catch {
-    Write-Error "Failed to connect to Microsoft Graph. Verify the details in config.json and the certificate."
-    return
+} else {
+    Write-Host "Already connected to Microsoft Graph as $((Get-MgContext).Account)." -ForegroundColor Green
 }
 
 # --- MAIN LOGIC ---
