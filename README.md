@@ -1,85 +1,62 @@
-# Get-SSOEnterpriseApps
+# Get-SSOApps
 
-A PowerShell script that uses Microsoft Graph to list all Entra ID Enterprise Applications configured with **SAML SSO** or **OIDC SSO**.
+A PowerShell script that uses Microsoft Graph to generate a unified CSV report of all Entra ID Enterprise Applications (`Application` and `Legacy` types), including SSO details (SAML/OIDC), URLs, and user/group assignment counts. Uses parallel processing for performance on large tenants.
 
 ## Prerequisites
 
-### PowerShell Module
+### PowerShell Modules
 
 ```powershell
 Install-Module Microsoft.Graph.Applications -Scope CurrentUser
+Install-Module Microsoft.Graph.Identity.DirectoryManagement -Scope CurrentUser
 ```
 
 ### Permissions
 
 | Permission | Type | Description |
 |---|---|---|
-| `Application.Read.All` | Delegated or Application | Read all applications and service principals |
+| `Application.Read.All` | Delegated | Read all applications and service principals |
+| `Directory.Read.All` | Delegated | Read directory data (assignments) |
 
 ## Usage
 
 ```powershell
-# List all SAML and OIDC SSO apps
-.\Get-SSOEnterpriseApps.ps1
-
-# SAML apps only
-.\Get-SSOEnterpriseApps.ps1 -SSOType SAML
-
-# OIDC apps only
-.\Get-SSOEnterpriseApps.ps1 -SSOType OIDC
-
-# Export results to CSV
-.\Get-SSOEnterpriseApps.ps1 -ExportCsvPath C:\Reports\SSOApps.csv
-
-# Use device code authentication (MFA / non-interactive sessions)
-.\Get-SSOEnterpriseApps.ps1 -UseDeviceCode
+.\Get-SSOApps.ps1
 ```
 
-## Parameters
+The script authenticates interactively via `Connect-MgGraph` if not already connected, then prompts:
 
-| Parameter | Type | Default | Description |
-|---|---|---|---|
-| `-SSOType` | String | `All` | Filter by SSO type: `All`, `SAML`, or `OIDC` |
-| `-ExportCsvPath` | String | — | Path to export results as a UTF-8 CSV file |
-| `-UseDeviceCode` | Switch | — | Authenticate via device code flow |
+1. **Test mode?** — Enter `Y` to process a limited number of apps (useful for validation), or `N` to process all apps in the tenant.
+2. **How many apps?** — (Test mode only) Enter the number of apps to retrieve.
 
-## Output
+The report is automatically saved as a CSV file in the same directory as the script, named `Report_All_EnterpriseApps_<timestamp>.csv`.
 
-The script displays a grouped table per SSO type and returns a `PSCustomObject` list with the following properties:
+## Output (CSV columns)
 
-| Property | Description |
+| Column | Description |
 |---|---|
-| `DisplayName` | Application display name |
-| `ApplicationId` | App (client) ID |
-| `ObjectId` | Service principal object ID |
-| `SSOType` | `SAML` or `OIDC` |
-| `AccountEnabled` | Whether sign-in is enabled |
-| `ServicePrincipalType` | e.g. `Application`, `ManagedIdentity` |
-| `LoginUrl` | Sign-on URL (SAML) |
-| `ReplyUrls` | Redirect/reply URIs |
-| `PublisherName` | Publisher of the application |
-| `AppOwnerOrganizationId` | Tenant ID of the app owner |
-| `Tags` | Tags on the service principal |
+| `ApplicationName` | Application display name |
+| `Application (Client) ID` | App (client) ID |
+| `App_Type` | Service principal type: `Application` or `Legacy` |
+| `Status` | `Enabled` or `Disabled` |
+| `AssignmentRequired` | Whether assignment is required (`Yes`, `No (Open)`, or `N/A` for Legacy) |
+| `SSO_Type` | `SAML`, `OIDC`, `Other`, or `N/A` (Legacy apps) |
+| `AssignedUsers` | Number of directly assigned users (Application type only) |
+| `AssignedGroups` | Number of assigned groups (Application type only) |
+| `Identifier (SAML)` | SAML identifier URIs (semicolon-separated) |
+| `Reply URL` | Reply/redirect URLs (semicolon-separated) |
 
 ## Example Output
 
 ```
 Connecting to Microsoft Graph...
-Fetching SAML SSO applications...
-  Found 12 SAML SSO application(s).
-Fetching OIDC SSO applications...
-  Found 4 OIDC SSO application(s).
-
-Total applications found: 16
-
-  [OIDC SSO - 4 app(s)]
-  DisplayName         ApplicationId                        AccountEnabled LoginUrl
-  -----------         -------------                        -------------- --------
-  My OIDC App         xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx           True
-
-  [SAML SSO - 12 app(s)]
-  DisplayName         ApplicationId                        AccountEnabled LoginUrl
-  -----------         -------------                        -------------- --------
-  Salesforce          xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx           True https://...
-  ...
+Connection successful.
+Do you want to run a test? (Y/N): N
+Production Mode: Retrieving ALL applications...
+Found 350 applications to analyze.
+Processing 350 applications in parallel (ThrottleLimit: 20)...
+--------------------------------------------------------
+Process complete. Report generated at:
+C:\Scripts\Report_All_EnterpriseApps_2026-03-05-1430.csv
+--------------------------------------------------------
 ```
