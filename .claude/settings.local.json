@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(\"c:/Users/Mrgro/OneDrive/Documents/GitHub/PS-All_SSO_Apps/Get-SSOEnterpriseApps.ps1\":*)"
+    ]
+  }
+}
