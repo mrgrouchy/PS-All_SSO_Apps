@@ -1,0 +1,29 @@
+# Output files
+Report_*.csv
+*.log
+
+# PowerShell session files
+*.pssc
+
+# Credentials / secrets
+*.pfx
+*.cer
+*.key
+*.secret
+.env
+
+# OS files
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# VS Code
+.vscode/
+
+# Claude Code
+.claude/
+
+# Temp files
+*.tmp
+*.bak
+*~
